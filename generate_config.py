@@ -1,6 +1,7 @@
 import argparse
 import random
 import pathlib
+import json
 
 # TAG Configuration Files
 
@@ -8,11 +9,13 @@ config = {
     "nPlayers" : 2,
     "mode" : "exhaustive",
     "matchups" : 10,
-    "verbpathlib.Pathe" : false,
+    "verbpathlib.Pathe" : False,
 }
 
 params = {}
 listener = {}
+elite_player = {}
+good_player = {}
 
 osla_player = {
     "class":"players.simple.OSLAHeuristic",
@@ -31,8 +34,47 @@ random_player = {
 
 # Good Dominion Player
 
+dominion_elite = {
+    "budgetType" : "BUDGET_TIME",
+    "rolloutLengthPerPlayer" : True,
+    "rolloutTermination" : "END_TURN", 
+    "rolloutLength" : 300,
+    "opponentTreePolicy" : "MultiTree",
+    "heuristic" : {
+    "heuristicType" : "SCORE_PLUS",
+    "class" : "players.heuristics.CoarseTunableHeuristic"
+  },
+  "K" : 1.0,
+  "exploreEpsilon" : 0.3,
+  "maxTreeDepth" : 3,
+  "treePolicy" : "UCB_Tuned",
+  "reuseTree" : True,
+  "information" : "Open_Loop",
+  "class" : "players.mcts.MCTSParams",
+  "budget" : 128
+    }
+
 # Mid Dominion Player
 
+dominion_good = {
+    "budgetType" : "BUDGET_TIME",
+    "rolloutLengthPerPlayer" : True,
+    "rolloutTermination" : "END_TURN", 
+    "rolloutLength" : 300,
+    "opponentTreePolicy" : "MultiTree",
+    "heuristic" : {
+    "heuristicType" : "SCORE_PLUS",
+    "class" : "players.heuristics.CoarseTunableHeuristic"
+  },
+  "K" : 1.0,
+  "exploreEpsilon" : 0.3,
+  "maxTreeDepth" : 3,
+  "treePolicy" : "UCB_Tuned",
+  "reuseTree" : True,
+  "information" : "Open_Loop",
+  "class" : "players.mcts.MCTSParams",
+  "budget" : 64
+}
 
 # Dominion Listener
 
@@ -55,7 +97,7 @@ dominion_listener = {
 }
 
 # Dominion cards
-dominion_cards: set[str] = {
+dominion_cards = [
     "CELLAR",
     "CHAPEL",
     "MOAT",
@@ -82,7 +124,7 @@ dominion_cards: set[str] = {
     "SENTRY",
     "WITCH",
     "ARTISAN"
-}
+]
     
 def populate_dominion_params():
     """
@@ -104,12 +146,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process a file path and a number.")
     parser.add_argument("game", type=str, help="The game to play")
     parser.add_argument("folder", type=str, help="The name of the output folder")
+    args = parser.parse_args()
+    
+    game = args.game
+    folder = args.folder
     
     # Game specific configuration
-    match parser.game:
+    match game:
         case "Dominion":
             populate_dominion_params()
             listener = dominion_listener
+            good_player = dominion_good
+            elite_player = dominion_elite
         case _:
             print("Game not supported")
             exit(1)
@@ -123,8 +171,24 @@ if __name__ == '__main__':
     
     # Populate configuration file with these directories
     config["palyerDirectory"] = folder + "/players"
-    config["listener"] = folder + "/listener"
+    config["listener"] = folder + "/listener.json"
     config["destDir"] = folder + "/output"
-    config["gameParams"] = folder + "/gameParams" + "/gameParams.json"
+    config["gameParams"] = folder +"/gameParams.json"
     
     # Write configuration files to json
+    with open(folder + "/config.json", "w") as f:
+        json.dump(config, f)
+    with open(folder + "/listener.json", "w") as f:
+        json.dump(listener, f)
+    with open(folder + "/gameParams.json", "w") as f:
+        json.dump(params, f)
+        
+    # Create player configuration files
+    with open(folder + "/players/elite_player.json", "w") as f:
+        json.dump(elite_player, f)
+    with open(folder + "/players/good_player.json", "w") as f:
+        json.dump(good_player, f)
+    with open(folder + "/players/osla_player.json", "w") as f:
+        json.dump(osla_player, f)
+    with open(folder + "/players/random_player.json", "w") as f:
+        json.dump(random_player, f)
